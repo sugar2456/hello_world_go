@@ -6,7 +6,6 @@
     },
     // 非rootユーザー設定
     "remoteUser": "vscode",
-    // Dockerfileでユーザーを作成しておく必要があります
     "updateRemoteUserUID": true,
     
     // その他の設定...
