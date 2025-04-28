@@ -14,7 +14,8 @@ func main() {
 	log.SetPrefix("greetings: ")
 	log.SetFlags(0)
 
-	greeting, err := greetings.Hi("Gladys")
+	names := []string{"Gladys", "Samantha", "Darrin"}
+	greeting, err := greetings.His(names)
 	if err != nil {
 		log.Fatal(err)
 	}
