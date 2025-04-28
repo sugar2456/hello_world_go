@@ -1,8 +1,15 @@
 package greetings
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
-func Hi(name string) string {
+func Hi(name string) (string, error) {
+	if name == "" {
+		return "", errors.New("empty name")
+	}
+
 	message := fmt.Sprintf("Hi, %v. Welcome!", name)
-	return message
+	return message, nil
 }
