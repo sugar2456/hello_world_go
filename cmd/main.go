@@ -9,6 +9,7 @@ import (
 func main() {
 	router := gin.Default()
 	router.GET("/albums", albums.GetAlbums)
+	router.POST("/albums", albums.PostAlbums)
 
 	router.Run("localhost:8080")
 }
