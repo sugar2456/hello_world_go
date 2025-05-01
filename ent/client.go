@@ -12,6 +12,7 @@ import (
 	"hello_world_go/ent/migrate"
 
 	"hello_world_go/ent/user"
+	"hello_world_go/ent/videos"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
@@ -25,6 +26,8 @@ type Client struct {
 	Schema *migrate.Schema
 	// User is the client for interacting with the User builders.
 	User *UserClient
+	// Videos is the client for interacting with the Videos builders.
+	Videos *VideosClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -37,6 +40,7 @@ func NewClient(opts ...Option) *Client {
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.User = NewUserClient(c.config)
+	c.Videos = NewVideosClient(c.config)
 }
 
 type (
@@ -130,6 +134,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ctx:    ctx,
 		config: cfg,
 		User:   NewUserClient(cfg),
+		Videos: NewVideosClient(cfg),
 	}, nil
 }
 
@@ -150,6 +155,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ctx:    ctx,
 		config: cfg,
 		User:   NewUserClient(cfg),
+		Videos: NewVideosClient(cfg),
 	}, nil
 }
 
@@ -179,12 +185,14 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	c.User.Use(hooks...)
+	c.Videos.Use(hooks...)
 }
 
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	c.User.Intercept(interceptors...)
+	c.Videos.Intercept(interceptors...)
 }
 
 // Mutate implements the ent.Mutator interface.
@@ -192,6 +200,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
 	case *UserMutation:
 		return c.User.mutate(ctx, m)
+	case *VideosMutation:
+		return c.Videos.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
 	}
@@ -330,12 +340,145 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 	}
 }
 
+// VideosClient is a client for the Videos schema.
+type VideosClient struct {
+	config
+}
+
+// NewVideosClient returns a client for the Videos from the given config.
+func NewVideosClient(c config) *VideosClient {
+	return &VideosClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `videos.Hooks(f(g(h())))`.
+func (c *VideosClient) Use(hooks ...Hook) {
+	c.hooks.Videos = append(c.hooks.Videos, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `videos.Intercept(f(g(h())))`.
+func (c *VideosClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Videos = append(c.inters.Videos, interceptors...)
+}
+
+// Create returns a builder for creating a Videos entity.
+func (c *VideosClient) Create() *VideosCreate {
+	mutation := newVideosMutation(c.config, OpCreate)
+	return &VideosCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Videos entities.
+func (c *VideosClient) CreateBulk(builders ...*VideosCreate) *VideosCreateBulk {
+	return &VideosCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *VideosClient) MapCreateBulk(slice any, setFunc func(*VideosCreate, int)) *VideosCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &VideosCreateBulk{err: fmt.Errorf("calling to VideosClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*VideosCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &VideosCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Videos.
+func (c *VideosClient) Update() *VideosUpdate {
+	mutation := newVideosMutation(c.config, OpUpdate)
+	return &VideosUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *VideosClient) UpdateOne(v *Videos) *VideosUpdateOne {
+	mutation := newVideosMutation(c.config, OpUpdateOne, withVideos(v))
+	return &VideosUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *VideosClient) UpdateOneID(id int) *VideosUpdateOne {
+	mutation := newVideosMutation(c.config, OpUpdateOne, withVideosID(id))
+	return &VideosUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Videos.
+func (c *VideosClient) Delete() *VideosDelete {
+	mutation := newVideosMutation(c.config, OpDelete)
+	return &VideosDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *VideosClient) DeleteOne(v *Videos) *VideosDeleteOne {
+	return c.DeleteOneID(v.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *VideosClient) DeleteOneID(id int) *VideosDeleteOne {
+	builder := c.Delete().Where(videos.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &VideosDeleteOne{builder}
+}
+
+// Query returns a query builder for Videos.
+func (c *VideosClient) Query() *VideosQuery {
+	return &VideosQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeVideos},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Videos entity by its id.
+func (c *VideosClient) Get(ctx context.Context, id int) (*Videos, error) {
+	return c.Query().Where(videos.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *VideosClient) GetX(ctx context.Context, id int) *Videos {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *VideosClient) Hooks() []Hook {
+	return c.hooks.Videos
+}
+
+// Interceptors returns the client interceptors.
+func (c *VideosClient) Interceptors() []Interceptor {
+	return c.inters.Videos
+}
+
+func (c *VideosClient) mutate(ctx context.Context, m *VideosMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&VideosCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&VideosUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&VideosUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&VideosDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Videos mutation op: %q", m.Op())
+	}
+}
+
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		User []ent.Hook
+		User, Videos []ent.Hook
 	}
 	inters struct {
-		User []ent.Interceptor
+		User, Videos []ent.Interceptor
 	}
 )
