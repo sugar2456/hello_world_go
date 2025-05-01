@@ -1,10 +1,9 @@
 {
     "name": "GO Development Container",
-    "build": {
-        "context": "..",
-        "dockerfile": "../Dockerfile"
-    },
-    // 非rootユーザー設定
+    "dockerComposeFile": ["../compose.yml"],
+    "service": "app",
+    "workspaceFolder": "/usr/src/app",
+    "shutdownAction": "none",
     "remoteUser": "vscode",
     "updateRemoteUserUID": true,
     

@@ -5,6 +5,8 @@ package ent
 import (
 	"hello_world_go/ent/schema"
 	"hello_world_go/ent/user"
+	"hello_world_go/ent/videos"
+	"time"
 )
 
 // The init function reads all schema descriptors with runtime code
@@ -21,4 +23,24 @@ func init() {
 	userDescName := userFields[1].Descriptor()
 	// user.DefaultName holds the default value on creation for the name field.
 	user.DefaultName = userDescName.Default.(string)
+	videosFields := schema.Videos{}.Fields()
+	_ = videosFields
+	// videosDescTitle is the schema descriptor for title field.
+	videosDescTitle := videosFields[0].Descriptor()
+	// videos.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	videos.TitleValidator = videosDescTitle.Validators[0].(func(string) error)
+	// videosDescURL is the schema descriptor for url field.
+	videosDescURL := videosFields[2].Descriptor()
+	// videos.URLValidator is a validator for the "url" field. It is called by the builders before save.
+	videos.URLValidator = videosDescURL.Validators[0].(func(string) error)
+	// videosDescCreatedAt is the schema descriptor for created_at field.
+	videosDescCreatedAt := videosFields[3].Descriptor()
+	// videos.DefaultCreatedAt holds the default value on creation for the created_at field.
+	videos.DefaultCreatedAt = videosDescCreatedAt.Default.(func() time.Time)
+	// videosDescUpdatedAt is the schema descriptor for updated_at field.
+	videosDescUpdatedAt := videosFields[4].Descriptor()
+	// videos.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	videos.DefaultUpdatedAt = videosDescUpdatedAt.Default.(func() time.Time)
+	// videos.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	videos.UpdateDefaultUpdatedAt = videosDescUpdatedAt.UpdateDefault.(func() time.Time)
 }
