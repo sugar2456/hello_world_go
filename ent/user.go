@@ -30,9 +30,11 @@ type User struct {
 type UserEdges struct {
 	// Videos holds the value of the videos edge.
 	Videos []*Videos `json:"videos,omitempty"`
+	// Playlists holds the value of the playlists edge.
+	Playlists []*Playlist `json:"playlists,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // VideosOrErr returns the Videos value or an error if the edge
@@ -42,6 +44,15 @@ func (e UserEdges) VideosOrErr() ([]*Videos, error) {
 		return e.Videos, nil
 	}
 	return nil, &NotLoadedError{edge: "videos"}
+}
+
+// PlaylistsOrErr returns the Playlists value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) PlaylistsOrErr() ([]*Playlist, error) {
+	if e.loadedTypes[1] {
+		return e.Playlists, nil
+	}
+	return nil, &NotLoadedError{edge: "playlists"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -102,6 +113,11 @@ func (u *User) Value(name string) (ent.Value, error) {
 // QueryVideos queries the "videos" edge of the User entity.
 func (u *User) QueryVideos() *VideosQuery {
 	return NewUserClient(u.config).QueryVideos(u)
+}
+
+// QueryPlaylists queries the "playlists" edge of the User entity.
+func (u *User) QueryPlaylists() *PlaylistQuery {
+	return NewUserClient(u.config).QueryPlaylists(u)
 }
 
 // Update returns a builder for updating this User.

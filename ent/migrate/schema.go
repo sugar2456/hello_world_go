@@ -8,6 +8,29 @@ import (
 )
 
 var (
+	// PlaylistsColumns holds the columns for the "playlists" table.
+	PlaylistsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "title", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "user_id", Type: field.TypeInt, Nullable: true},
+	}
+	// PlaylistsTable holds the schema information for the "playlists" table.
+	PlaylistsTable = &schema.Table{
+		Name:       "playlists",
+		Columns:    PlaylistsColumns,
+		PrimaryKey: []*schema.Column{PlaylistsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "playlists_users_playlists",
+				Columns:    []*schema.Column{PlaylistsColumns[5]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -32,6 +55,7 @@ var (
 		{Name: "thumbnail", Type: field.TypeString, Nullable: true},
 		{Name: "category", Type: field.TypeString, Nullable: true},
 		{Name: "tags", Type: field.TypeString, Nullable: true},
+		{Name: "playlist_videos", Type: field.TypeInt, Nullable: true},
 		{Name: "user_videos", Type: field.TypeInt, Nullable: true},
 	}
 	// VideosTable holds the schema information for the "videos" table.
@@ -41,8 +65,14 @@ var (
 		PrimaryKey: []*schema.Column{VideosColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "videos_users_videos",
+				Symbol:     "videos_playlists_videos",
 				Columns:    []*schema.Column{VideosColumns[10]},
+				RefColumns: []*schema.Column{PlaylistsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "videos_users_videos",
+				Columns:    []*schema.Column{VideosColumns[11]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -50,11 +80,14 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		PlaylistsTable,
 		UsersTable,
 		VideosTable,
 	}
 )
 
 func init() {
-	VideosTable.ForeignKeys[0].RefTable = UsersTable
+	PlaylistsTable.ForeignKeys[0].RefTable = UsersTable
+	VideosTable.ForeignKeys[0].RefTable = PlaylistsTable
+	VideosTable.ForeignKeys[1].RefTable = UsersTable
 }

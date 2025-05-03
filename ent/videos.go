@@ -38,9 +38,10 @@ type Videos struct {
 	Tags string `json:"tags,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the VideosQuery when eager-loading is set.
-	Edges        VideosEdges `json:"edges"`
-	user_videos  *int
-	selectValues sql.SelectValues
+	Edges           VideosEdges `json:"edges"`
+	playlist_videos *int
+	user_videos     *int
+	selectValues    sql.SelectValues
 }
 
 // VideosEdges holds the relations/edges for other nodes in the graph.
@@ -74,7 +75,9 @@ func (*Videos) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case videos.FieldCreatedAt, videos.FieldUpdatedAt, videos.FieldDeletedAt:
 			values[i] = new(sql.NullTime)
-		case videos.ForeignKeys[0]: // user_videos
+		case videos.ForeignKeys[0]: // playlist_videos
+			values[i] = new(sql.NullInt64)
+		case videos.ForeignKeys[1]: // user_videos
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -152,6 +155,13 @@ func (v *Videos) assignValues(columns []string, values []any) error {
 				v.Tags = value.String
 			}
 		case videos.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field playlist_videos", value)
+			} else if value.Valid {
+				v.playlist_videos = new(int)
+				*v.playlist_videos = int(value.Int64)
+			}
+		case videos.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field user_videos", value)
 			} else if value.Valid {

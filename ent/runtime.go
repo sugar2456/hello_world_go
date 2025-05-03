@@ -3,6 +3,7 @@
 package ent
 
 import (
+	"hello_world_go/ent/playlist"
 	"hello_world_go/ent/schema"
 	"hello_world_go/ent/user"
 	"hello_world_go/ent/videos"
@@ -13,6 +14,22 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	playlistFields := schema.Playlist{}.Fields()
+	_ = playlistFields
+	// playlistDescTitle is the schema descriptor for title field.
+	playlistDescTitle := playlistFields[0].Descriptor()
+	// playlist.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	playlist.TitleValidator = playlistDescTitle.Validators[0].(func(string) error)
+	// playlistDescCreatedAt is the schema descriptor for created_at field.
+	playlistDescCreatedAt := playlistFields[3].Descriptor()
+	// playlist.DefaultCreatedAt holds the default value on creation for the created_at field.
+	playlist.DefaultCreatedAt = playlistDescCreatedAt.Default.(func() time.Time)
+	// playlistDescUpdatedAt is the schema descriptor for updated_at field.
+	playlistDescUpdatedAt := playlistFields[4].Descriptor()
+	// playlist.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	playlist.DefaultUpdatedAt = playlistDescUpdatedAt.Default.(func() time.Time)
+	// playlist.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	playlist.UpdateDefaultUpdatedAt = playlistDescUpdatedAt.UpdateDefault.(func() time.Time)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescAge is the schema descriptor for age field.

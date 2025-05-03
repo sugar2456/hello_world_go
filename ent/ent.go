@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hello_world_go/ent/playlist"
 	"hello_world_go/ent/user"
 	"hello_world_go/ent/videos"
 	"reflect"
@@ -74,8 +75,9 @@ var (
 func checkColumn(table, column string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			user.Table:   user.ValidColumn,
-			videos.Table: videos.ValidColumn,
+			playlist.Table: playlist.ValidColumn,
+			user.Table:     user.ValidColumn,
+			videos.Table:   videos.ValidColumn,
 		})
 	})
 	return columnCheck(table, column)

@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hello_world_go/ent/playlist"
 	"hello_world_go/ent/predicate"
 	"hello_world_go/ent/user"
 	"hello_world_go/ent/videos"
@@ -78,6 +79,21 @@ func (uu *UserUpdate) AddVideos(v ...*Videos) *UserUpdate {
 	return uu.AddVideoIDs(ids...)
 }
 
+// AddPlaylistIDs adds the "playlists" edge to the Playlist entity by IDs.
+func (uu *UserUpdate) AddPlaylistIDs(ids ...int) *UserUpdate {
+	uu.mutation.AddPlaylistIDs(ids...)
+	return uu
+}
+
+// AddPlaylists adds the "playlists" edges to the Playlist entity.
+func (uu *UserUpdate) AddPlaylists(p ...*Playlist) *UserUpdate {
+	ids := make([]int, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return uu.AddPlaylistIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
@@ -102,6 +118,27 @@ func (uu *UserUpdate) RemoveVideos(v ...*Videos) *UserUpdate {
 		ids[i] = v[i].ID
 	}
 	return uu.RemoveVideoIDs(ids...)
+}
+
+// ClearPlaylists clears all "playlists" edges to the Playlist entity.
+func (uu *UserUpdate) ClearPlaylists() *UserUpdate {
+	uu.mutation.ClearPlaylists()
+	return uu
+}
+
+// RemovePlaylistIDs removes the "playlists" edge to Playlist entities by IDs.
+func (uu *UserUpdate) RemovePlaylistIDs(ids ...int) *UserUpdate {
+	uu.mutation.RemovePlaylistIDs(ids...)
+	return uu
+}
+
+// RemovePlaylists removes "playlists" edges to Playlist entities.
+func (uu *UserUpdate) RemovePlaylists(p ...*Playlist) *UserUpdate {
+	ids := make([]int, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return uu.RemovePlaylistIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -207,6 +244,51 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if uu.mutation.PlaylistsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PlaylistsTable,
+			Columns: []string{user.PlaylistsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(playlist.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.RemovedPlaylistsIDs(); len(nodes) > 0 && !uu.mutation.PlaylistsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PlaylistsTable,
+			Columns: []string{user.PlaylistsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(playlist.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.PlaylistsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PlaylistsTable,
+			Columns: []string{user.PlaylistsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(playlist.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, uu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{user.Label}
@@ -277,6 +359,21 @@ func (uuo *UserUpdateOne) AddVideos(v ...*Videos) *UserUpdateOne {
 	return uuo.AddVideoIDs(ids...)
 }
 
+// AddPlaylistIDs adds the "playlists" edge to the Playlist entity by IDs.
+func (uuo *UserUpdateOne) AddPlaylistIDs(ids ...int) *UserUpdateOne {
+	uuo.mutation.AddPlaylistIDs(ids...)
+	return uuo
+}
+
+// AddPlaylists adds the "playlists" edges to the Playlist entity.
+func (uuo *UserUpdateOne) AddPlaylists(p ...*Playlist) *UserUpdateOne {
+	ids := make([]int, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return uuo.AddPlaylistIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uuo *UserUpdateOne) Mutation() *UserMutation {
 	return uuo.mutation
@@ -301,6 +398,27 @@ func (uuo *UserUpdateOne) RemoveVideos(v ...*Videos) *UserUpdateOne {
 		ids[i] = v[i].ID
 	}
 	return uuo.RemoveVideoIDs(ids...)
+}
+
+// ClearPlaylists clears all "playlists" edges to the Playlist entity.
+func (uuo *UserUpdateOne) ClearPlaylists() *UserUpdateOne {
+	uuo.mutation.ClearPlaylists()
+	return uuo
+}
+
+// RemovePlaylistIDs removes the "playlists" edge to Playlist entities by IDs.
+func (uuo *UserUpdateOne) RemovePlaylistIDs(ids ...int) *UserUpdateOne {
+	uuo.mutation.RemovePlaylistIDs(ids...)
+	return uuo
+}
+
+// RemovePlaylists removes "playlists" edges to Playlist entities.
+func (uuo *UserUpdateOne) RemovePlaylists(p ...*Playlist) *UserUpdateOne {
+	ids := make([]int, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return uuo.RemovePlaylistIDs(ids...)
 }
 
 // Where appends a list predicates to the UserUpdate builder.
@@ -429,6 +547,51 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(videos.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uuo.mutation.PlaylistsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PlaylistsTable,
+			Columns: []string{user.PlaylistsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(playlist.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.RemovedPlaylistsIDs(); len(nodes) > 0 && !uuo.mutation.PlaylistsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PlaylistsTable,
+			Columns: []string{user.PlaylistsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(playlist.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.PlaylistsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.PlaylistsTable,
+			Columns: []string{user.PlaylistsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(playlist.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

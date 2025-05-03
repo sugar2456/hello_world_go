@@ -11,6 +11,7 @@ import (
 
 	"hello_world_go/ent/migrate"
 
+	"hello_world_go/ent/playlist"
 	"hello_world_go/ent/user"
 	"hello_world_go/ent/videos"
 
@@ -25,6 +26,8 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// Playlist is the client for interacting with the Playlist builders.
+	Playlist *PlaylistClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 	// Videos is the client for interacting with the Videos builders.
@@ -40,6 +43,7 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.Playlist = NewPlaylistClient(c.config)
 	c.User = NewUserClient(c.config)
 	c.Videos = NewVideosClient(c.config)
 }
@@ -132,10 +136,11 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:    ctx,
-		config: cfg,
-		User:   NewUserClient(cfg),
-		Videos: NewVideosClient(cfg),
+		ctx:      ctx,
+		config:   cfg,
+		Playlist: NewPlaylistClient(cfg),
+		User:     NewUserClient(cfg),
+		Videos:   NewVideosClient(cfg),
 	}, nil
 }
 
@@ -153,17 +158,18 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:    ctx,
-		config: cfg,
-		User:   NewUserClient(cfg),
-		Videos: NewVideosClient(cfg),
+		ctx:      ctx,
+		config:   cfg,
+		Playlist: NewPlaylistClient(cfg),
+		User:     NewUserClient(cfg),
+		Videos:   NewVideosClient(cfg),
 	}, nil
 }
 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		User.
+//		Playlist.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -185,6 +191,7 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
+	c.Playlist.Use(hooks...)
 	c.User.Use(hooks...)
 	c.Videos.Use(hooks...)
 }
@@ -192,6 +199,7 @@ func (c *Client) Use(hooks ...Hook) {
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
+	c.Playlist.Intercept(interceptors...)
 	c.User.Intercept(interceptors...)
 	c.Videos.Intercept(interceptors...)
 }
@@ -199,12 +207,179 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *PlaylistMutation:
+		return c.Playlist.mutate(ctx, m)
 	case *UserMutation:
 		return c.User.mutate(ctx, m)
 	case *VideosMutation:
 		return c.Videos.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// PlaylistClient is a client for the Playlist schema.
+type PlaylistClient struct {
+	config
+}
+
+// NewPlaylistClient returns a client for the Playlist from the given config.
+func NewPlaylistClient(c config) *PlaylistClient {
+	return &PlaylistClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `playlist.Hooks(f(g(h())))`.
+func (c *PlaylistClient) Use(hooks ...Hook) {
+	c.hooks.Playlist = append(c.hooks.Playlist, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `playlist.Intercept(f(g(h())))`.
+func (c *PlaylistClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Playlist = append(c.inters.Playlist, interceptors...)
+}
+
+// Create returns a builder for creating a Playlist entity.
+func (c *PlaylistClient) Create() *PlaylistCreate {
+	mutation := newPlaylistMutation(c.config, OpCreate)
+	return &PlaylistCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Playlist entities.
+func (c *PlaylistClient) CreateBulk(builders ...*PlaylistCreate) *PlaylistCreateBulk {
+	return &PlaylistCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PlaylistClient) MapCreateBulk(slice any, setFunc func(*PlaylistCreate, int)) *PlaylistCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PlaylistCreateBulk{err: fmt.Errorf("calling to PlaylistClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PlaylistCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PlaylistCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Playlist.
+func (c *PlaylistClient) Update() *PlaylistUpdate {
+	mutation := newPlaylistMutation(c.config, OpUpdate)
+	return &PlaylistUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PlaylistClient) UpdateOne(pl *Playlist) *PlaylistUpdateOne {
+	mutation := newPlaylistMutation(c.config, OpUpdateOne, withPlaylist(pl))
+	return &PlaylistUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PlaylistClient) UpdateOneID(id int) *PlaylistUpdateOne {
+	mutation := newPlaylistMutation(c.config, OpUpdateOne, withPlaylistID(id))
+	return &PlaylistUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Playlist.
+func (c *PlaylistClient) Delete() *PlaylistDelete {
+	mutation := newPlaylistMutation(c.config, OpDelete)
+	return &PlaylistDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PlaylistClient) DeleteOne(pl *Playlist) *PlaylistDeleteOne {
+	return c.DeleteOneID(pl.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PlaylistClient) DeleteOneID(id int) *PlaylistDeleteOne {
+	builder := c.Delete().Where(playlist.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PlaylistDeleteOne{builder}
+}
+
+// Query returns a query builder for Playlist.
+func (c *PlaylistClient) Query() *PlaylistQuery {
+	return &PlaylistQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePlaylist},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Playlist entity by its id.
+func (c *PlaylistClient) Get(ctx context.Context, id int) (*Playlist, error) {
+	return c.Query().Where(playlist.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PlaylistClient) GetX(ctx context.Context, id int) *Playlist {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryUser queries the user edge of a Playlist.
+func (c *PlaylistClient) QueryUser(pl *Playlist) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := pl.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(playlist.Table, playlist.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, playlist.UserTable, playlist.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(pl.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryVideos queries the videos edge of a Playlist.
+func (c *PlaylistClient) QueryVideos(pl *Playlist) *VideosQuery {
+	query := (&VideosClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := pl.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(playlist.Table, playlist.FieldID, id),
+			sqlgraph.To(videos.Table, videos.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, playlist.VideosTable, playlist.VideosColumn),
+		)
+		fromV = sqlgraph.Neighbors(pl.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *PlaylistClient) Hooks() []Hook {
+	return c.hooks.Playlist
+}
+
+// Interceptors returns the client interceptors.
+func (c *PlaylistClient) Interceptors() []Interceptor {
+	return c.inters.Playlist
+}
+
+func (c *PlaylistClient) mutate(ctx context.Context, m *PlaylistMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PlaylistCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PlaylistUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PlaylistUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PlaylistDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Playlist mutation op: %q", m.Op())
 	}
 }
 
@@ -325,6 +500,22 @@ func (c *UserClient) QueryVideos(u *User) *VideosQuery {
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(videos.Table, videos.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.VideosTable, user.VideosColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryPlaylists queries the playlists edge of a User.
+func (c *UserClient) QueryPlaylists(u *User) *PlaylistQuery {
+	query := (&PlaylistClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(playlist.Table, playlist.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.PlaylistsTable, user.PlaylistsColumn),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil
@@ -509,9 +700,9 @@ func (c *VideosClient) mutate(ctx context.Context, m *VideosMutation) (Value, er
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		User, Videos []ent.Hook
+		Playlist, User, Videos []ent.Hook
 	}
 	inters struct {
-		User, Videos []ent.Interceptor
+		Playlist, User, Videos []ent.Interceptor
 	}
 )
