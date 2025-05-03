@@ -5,6 +5,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/edge"
 )
 
 // Videos holds the schema definition for the Videos entity.
@@ -39,5 +40,9 @@ func (Videos) Fields() []ent.Field {
 
 // Edges of the Videos.
 func (Videos) Edges() []ent.Edge {
-	return nil
+	return []ent.Edge{
+		edge.From("user", User.Type).
+			Ref("videos").
+			Unique(),
+	}
 }

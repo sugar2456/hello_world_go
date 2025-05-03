@@ -4,6 +4,7 @@ package user
 
 import (
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 )
 
 const (
@@ -15,8 +16,17 @@ const (
 	FieldAge = "age"
 	// FieldName holds the string denoting the name field in the database.
 	FieldName = "name"
+	// EdgeVideos holds the string denoting the videos edge name in mutations.
+	EdgeVideos = "videos"
 	// Table holds the table name of the user in the database.
 	Table = "users"
+	// VideosTable is the table that holds the videos relation/edge.
+	VideosTable = "videos"
+	// VideosInverseTable is the table name for the Videos entity.
+	// It exists in this package in order to avoid circular dependency with the "videos" package.
+	VideosInverseTable = "videos"
+	// VideosColumn is the table column denoting the videos relation/edge.
+	VideosColumn = "user_videos"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -59,4 +69,25 @@ func ByAge(opts ...sql.OrderTermOption) OrderOption {
 // ByName orders the results by the name field.
 func ByName(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldName, opts...).ToFunc()
+}
+
+// ByVideosCount orders the results by videos count.
+func ByVideosCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newVideosStep(), opts...)
+	}
+}
+
+// ByVideos orders the results by videos terms.
+func ByVideos(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newVideosStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newVideosStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(VideosInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, VideosTable, VideosColumn),
+	)
 }

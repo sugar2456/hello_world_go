@@ -32,12 +32,21 @@ var (
 		{Name: "thumbnail", Type: field.TypeString, Nullable: true},
 		{Name: "category", Type: field.TypeString, Nullable: true},
 		{Name: "tags", Type: field.TypeString, Nullable: true},
+		{Name: "user_videos", Type: field.TypeInt, Nullable: true},
 	}
 	// VideosTable holds the schema information for the "videos" table.
 	VideosTable = &schema.Table{
 		Name:       "videos",
 		Columns:    VideosColumns,
 		PrimaryKey: []*schema.Column{VideosColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "videos_users_videos",
+				Columns:    []*schema.Column{VideosColumns[10]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
@@ -47,4 +56,5 @@ var (
 )
 
 func init() {
+	VideosTable.ForeignKeys[0].RefTable = UsersTable
 }

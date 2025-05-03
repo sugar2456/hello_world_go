@@ -12,3 +12,9 @@ go run cmd/main.go
 go build -o hello_app cmd/main.go
 ./hello_app
 ```
+
+## スキーマ更新後のコード生成コマンド
+
+```
+go generate ./ent
+```

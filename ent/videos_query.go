@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"hello_world_go/ent/predicate"
+	"hello_world_go/ent/user"
 	"hello_world_go/ent/videos"
 	"math"
 
@@ -22,6 +23,8 @@ type VideosQuery struct {
 	order      []videos.OrderOption
 	inters     []Interceptor
 	predicates []predicate.Videos
+	withUser   *UserQuery
+	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -56,6 +59,28 @@ func (vq *VideosQuery) Unique(unique bool) *VideosQuery {
 func (vq *VideosQuery) Order(o ...videos.OrderOption) *VideosQuery {
 	vq.order = append(vq.order, o...)
 	return vq
+}
+
+// QueryUser chains the current query on the "user" edge.
+func (vq *VideosQuery) QueryUser() *UserQuery {
+	query := (&UserClient{config: vq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := vq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := vq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(videos.Table, videos.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, videos.UserTable, videos.UserColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(vq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Videos entity from the query.
@@ -250,10 +275,22 @@ func (vq *VideosQuery) Clone() *VideosQuery {
 		order:      append([]videos.OrderOption{}, vq.order...),
 		inters:     append([]Interceptor{}, vq.inters...),
 		predicates: append([]predicate.Videos{}, vq.predicates...),
+		withUser:   vq.withUser.Clone(),
 		// clone intermediate query.
 		sql:  vq.sql.Clone(),
 		path: vq.path,
 	}
+}
+
+// WithUser tells the query-builder to eager-load the nodes that are connected to
+// the "user" edge. The optional arguments are used to configure the query builder of the edge.
+func (vq *VideosQuery) WithUser(opts ...func(*UserQuery)) *VideosQuery {
+	query := (&UserClient{config: vq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	vq.withUser = query
+	return vq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -332,15 +369,26 @@ func (vq *VideosQuery) prepareQuery(ctx context.Context) error {
 
 func (vq *VideosQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Videos, error) {
 	var (
-		nodes = []*Videos{}
-		_spec = vq.querySpec()
+		nodes       = []*Videos{}
+		withFKs     = vq.withFKs
+		_spec       = vq.querySpec()
+		loadedTypes = [1]bool{
+			vq.withUser != nil,
+		}
 	)
+	if vq.withUser != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, videos.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Videos).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Videos{config: vq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -352,7 +400,46 @@ func (vq *VideosQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Video
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := vq.withUser; query != nil {
+		if err := vq.loadUser(ctx, query, nodes, nil,
+			func(n *Videos, e *User) { n.Edges.User = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (vq *VideosQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*Videos, init func(*Videos), assign func(*Videos, *User)) error {
+	ids := make([]int, 0, len(nodes))
+	nodeids := make(map[int][]*Videos)
+	for i := range nodes {
+		if nodes[i].user_videos == nil {
+			continue
+		}
+		fk := *nodes[i].user_videos
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "user_videos" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (vq *VideosQuery) sqlCount(ctx context.Context) (int, error) {

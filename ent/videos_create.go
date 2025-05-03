@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hello_world_go/ent/user"
 	"hello_world_go/ent/videos"
 	"time"
 
@@ -128,6 +129,25 @@ func (vc *VideosCreate) SetNillableTags(s *string) *VideosCreate {
 		vc.SetTags(*s)
 	}
 	return vc
+}
+
+// SetUserID sets the "user" edge to the User entity by ID.
+func (vc *VideosCreate) SetUserID(id int) *VideosCreate {
+	vc.mutation.SetUserID(id)
+	return vc
+}
+
+// SetNillableUserID sets the "user" edge to the User entity by ID if the given value is not nil.
+func (vc *VideosCreate) SetNillableUserID(id *int) *VideosCreate {
+	if id != nil {
+		vc = vc.SetUserID(*id)
+	}
+	return vc
+}
+
+// SetUser sets the "user" edge to the User entity.
+func (vc *VideosCreate) SetUser(u *User) *VideosCreate {
+	return vc.SetUserID(u.ID)
 }
 
 // Mutation returns the VideosMutation object of the builder.
@@ -260,6 +280,23 @@ func (vc *VideosCreate) createSpec() (*Videos, *sqlgraph.CreateSpec) {
 	if value, ok := vc.mutation.Tags(); ok {
 		_spec.SetField(videos.FieldTags, field.TypeString, value)
 		_node.Tags = value
+	}
+	if nodes := vc.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   videos.UserTable,
+			Columns: []string{videos.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.user_videos = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

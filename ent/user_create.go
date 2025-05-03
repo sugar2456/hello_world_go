@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"hello_world_go/ent/user"
+	"hello_world_go/ent/videos"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -37,6 +38,21 @@ func (uc *UserCreate) SetNillableName(s *string) *UserCreate {
 		uc.SetName(*s)
 	}
 	return uc
+}
+
+// AddVideoIDs adds the "videos" edge to the Videos entity by IDs.
+func (uc *UserCreate) AddVideoIDs(ids ...int) *UserCreate {
+	uc.mutation.AddVideoIDs(ids...)
+	return uc
+}
+
+// AddVideos adds the "videos" edges to the Videos entity.
+func (uc *UserCreate) AddVideos(v ...*Videos) *UserCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return uc.AddVideoIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -126,6 +142,22 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := uc.mutation.Name(); ok {
 		_spec.SetField(user.FieldName, field.TypeString, value)
 		_node.Name = value
+	}
+	if nodes := uc.mutation.VideosIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.VideosTable,
+			Columns: []string{user.VideosColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(videos.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }
