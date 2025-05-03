@@ -1,0 +1,4 @@
+-- Create "users" table
+CREATE TABLE `users` (`id` bigint NOT NULL AUTO_INCREMENT, `age` bigint NOT NULL, `name` varchar(255) NOT NULL DEFAULT "unknown", PRIMARY KEY (`id`)) CHARSET utf8mb4 COLLATE utf8mb4_bin;
+-- Create "videos" table
+CREATE TABLE `videos` (`id` bigint NOT NULL AUTO_INCREMENT, `title` varchar(255) NOT NULL, `description` varchar(255) NULL, `url` varchar(255) NOT NULL, `created_at` timestamp NOT NULL, `updated_at` timestamp NOT NULL, `deleted_at` timestamp NULL, `thumbnail` varchar(255) NULL, `category` varchar(255) NULL, `tags` varchar(255) NULL, `user_videos` bigint NULL, PRIMARY KEY (`id`), INDEX `videos_users_videos` (`user_videos`), CONSTRAINT `videos_users_videos` FOREIGN KEY (`user_videos`) REFERENCES `users` (`id`) ON UPDATE NO ACTION ON DELETE SET NULL) CHARSET utf8mb4 COLLATE utf8mb4_bin;
