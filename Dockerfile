@@ -8,6 +8,8 @@ RUN groupadd --gid 1000 vscode \
     && echo vscode ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/vscode \
     && chmod 0440 /etc/sudoers.d/vscode
 
+RUN sudo apt update && sudo curl -sSf https://atlasgo.sh | sh
+
 WORKDIR /usr/src/app
 
 COPY go.mod ./
