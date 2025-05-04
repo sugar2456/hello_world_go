@@ -96,3 +96,23 @@ func TestCreateUser(t *testing.T) {
 	// Output:
 	// ユーザー名: テストユーザー, 年齢: 31
 }
+
+func TestUpdateUser(t *testing.T) {
+	user, err := UpdateUser(1, "更新されたユーザー", 32)
+	if err != nil {
+		t.Fatalf("failed updating user: %v", err)
+	}
+	fmt.Printf("ユーザー名: %s, 年齢: %d\n", user.Name, user.Age)
+	// Output:
+	// ユーザー名: 更新されたユーザー, 年齢: 32
+}
+
+func TestDeleteUser(t *testing.T) {
+	err := DeleteUser(1)
+	if err != nil {
+		t.Fatalf("failed deleting user: %v", err)
+	}
+	fmt.Println("ユーザー削除成功")
+	// Output:
+	// ユーザー削除成功
+}
