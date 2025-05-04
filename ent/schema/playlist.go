@@ -16,6 +16,7 @@ func (Playlist) Fields() []ent.Field {
         field.String("title").NotEmpty(),
         field.String("description").Optional(),
         field.Int("user_id").Optional(),
+        // field.Int("video_id").Optional(),
         field.Time("created_at").Default(time.Now),
 		field.Time("updated_at").
 			Default(time.Now).

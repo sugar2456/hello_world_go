@@ -44,5 +44,7 @@ func (Videos) Edges() []ent.Edge {
 		edge.From("user", User.Type).
 			Ref("videos").
 			Unique(),
+		edge.From("playlists", Playlist.Type).
+			Ref("videos"),
 	}
 }

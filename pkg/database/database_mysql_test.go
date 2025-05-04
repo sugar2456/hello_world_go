@@ -86,3 +86,36 @@ func ExampleVideos() {
 	// Output:
 	// ビデオタイトル: テストビデオ, 説明: これはテストビデオです, URL: http://example.com/test_video
 }
+
+func ExamplePlaylist() {
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=True",
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_NAME"),
+	)
+	client, err := ent.Open("mysql", dsn)
+	if err != nil {
+		log.Fatalf("failed opening connection to sqlite: %v", err)
+	}
+	defer client.Close()
+	ctx := context.Background()
+	// 自動マイグレーションツールを実行して、すべてのスキーマリソースを作成します。
+	if err := client.Schema.Create(ctx); err != nil {
+		log.Fatalf("failed creating schema resources: %v", err)
+	}
+	// テストプレイリストデータを作成
+	playlist, err := client.Playlist.Create().
+		SetTitle("テストプレイリスト").
+		SetDescription("これはテストプレイリストです").
+		SetUserID(1).
+		// SetVideos([]*ent.Videos{}).
+		Save(ctx)
+	if err != nil {
+		log.Fatalf("failed creating playlist: %v", err)
+	}
+	fmt.Printf("プレイリストタイトル: %s, 説明: %s\n", playlist.Title, playlist.Description)
+	// output:
+	// プレイリストタイトル: テストプレイリスト, 説明: これはテストプレイリストです
+}
