@@ -1,5 +1,11 @@
 # GO練習用リポジトリ
 
+## Dockerでgo環境を構築
+
+```
+docker compose up -d
+```
+
 ## 実行
 
 ```
