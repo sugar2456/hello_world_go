@@ -1,5 +1,8 @@
 FROM golang:1.24.2-bookworm
 
+RUN go install golang.org/x/tools/cmd/goimports@latest \
+ && go install golang.org/x/tools/gopls@latest
+ 
 # 非rootユーザーを作成
 RUN groupadd --gid 1000 vscode \
     && useradd --uid 1000 --gid 1000 -m vscode \
