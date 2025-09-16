@@ -21,4 +21,10 @@ func (c Counter) String() string {
 
 func doUpdateWrong(c Counter) {
 	c.Increment()
+	fmt.Println("Inside doUpdateWrong:", c)
+}
+
+func doUpdateRight(c *Counter) {
+	c.Increment()
+	fmt.Println("Inside doUpdateRight:", c)
 }

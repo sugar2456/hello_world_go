@@ -1,6 +1,7 @@
 package counter
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -18,17 +19,16 @@ func TestIncrement(t *testing.T) {
 	}
 }
 
-func TestDoUpdateWrong(t *testing.T) {
+func TestDoUpdate(t *testing.T) {
 	c := Counter{}
-	initialTotal := c.total
-	initialTime := c.lastUpdate
-
+	fmt.Println("main1:", c.String())
 	doUpdateWrong(c)
-
-	if c.total != initialTotal {
-		t.Errorf("Expected total to remain %d, got %d", initialTotal, c.total)
-	}
-	if !c.lastUpdate.Equal(initialTime) {
-		t.Errorf("Expected lastUpdate to remain %v, got %v", initialTime, c.lastUpdate)
+	fmt.Println("main2:", c.String())
+	doUpdateRight(&c)
+	fmt.Println("main3:", c.String())
+	doUpdateRight(&c)
+	fmt.Println("main4:", c.String())
+	if c.total != 2 {
+		t.Errorf("Expected total to be 2 after two increments, got %d", c.total)
 	}
 }
